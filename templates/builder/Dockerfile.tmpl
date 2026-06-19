@@ -1,0 +1,35 @@
+# Build stage
+FROM swift:{{ .SwiftVersion }}-jammy AS builder
+
+WORKDIR /app
+
+# Copy package manifest first for dependency caching
+COPY code/Package.swift ./
+COPY code/Package.resolved ./
+RUN swift package resolve
+
+# Copy the full source tree and build
+COPY code/ ./
+RUN swift build -c release --static-swift-stdlib
+
+# Final stage
+FROM ubuntu:{{ .UbuntuVersion }}
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    libcurl4 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+{{ range .Envs }}
+ENV {{ .Key }}={{ .Value }}
+{{ end }}
+
+RUN useradd --create-home appuser
+COPY --chown=appuser --from=builder /app/.build/release/Run ./app
+
+USER appuser
+
+EXPOSE 8080
+CMD ["./app"]
