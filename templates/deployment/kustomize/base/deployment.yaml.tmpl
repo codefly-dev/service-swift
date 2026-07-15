@@ -1,21 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ "{{" }} .Service.Name {{ "}}" }}
-  namespace: {{ "{{" }} .Namespace {{ "}}" }}
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{ "{{" }} .Service.Name {{ "}}" }}
+      app: {{ .Name }}
   template:
     metadata:
       labels:
-        app: {{ "{{" }} .Service.Name {{ "}}" }}
+        app: {{ .Name }}
     spec:
       containers:
-        - name: {{ "{{" }} .Service.Name {{ "}}" }}
-          image: {{ "{{" }} .Image.FullName {{ "}}" }}
+        - name: {{ .Name }}
+          image: {{ .Image }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Name }}-config
+            - secretRef:
+                name: {{ .Name }}-secret
           ports:
             - containerPort: 8080
               name: http

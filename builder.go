@@ -4,8 +4,8 @@ import (
 	"context"
 	"embed"
 
-	dockerhelpers "github.com/codefly-dev/core/agents/helpers/docker"
 	"github.com/codefly-dev/core/agents/communicate"
+	dockerhelpers "github.com/codefly-dev/core/agents/helpers/docker"
 	"github.com/codefly-dev/core/agents/services"
 	basev0 "github.com/codefly-dev/core/generated/go/codefly/base/v0"
 	agentv0 "github.com/codefly-dev/core/generated/go/codefly/services/agent/v0"
@@ -182,8 +182,11 @@ func (s *Builder) Deploy(ctx context.Context, req *builderv0.DeploymentRequest) 
 	defer s.Wool.Catch()
 	ctx = s.Wool.Inject(ctx)
 
-	// Placeholder: deployment not yet implemented for Swift
-	return s.Builder.DeployResponse()
+	return s.Builder.DeployKustomize(ctx, req, services.KustomizeDeployment{
+		EnvironmentVariables: s.EnvironmentVariables,
+		Templates:            deploymentFS,
+		Inputs:               services.ApplicationDeploymentInputs(),
+	})
 }
 
 func (s *Builder) Options() []*agentv0.Question {
