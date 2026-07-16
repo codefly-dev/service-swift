@@ -7,6 +7,7 @@ import (
 	"github.com/codefly-dev/core/agents/communicate"
 	dockerhelpers "github.com/codefly-dev/core/agents/helpers/docker"
 	"github.com/codefly-dev/core/agents/services"
+	"github.com/codefly-dev/core/agents/services/sbom"
 	basev0 "github.com/codefly-dev/core/generated/go/codefly/base/v0"
 	agentv0 "github.com/codefly-dev/core/generated/go/codefly/services/agent/v0"
 	builderv0 "github.com/codefly-dev/core/generated/go/codefly/services/builder/v0"
@@ -102,11 +103,18 @@ func (s *Builder) Sync(ctx context.Context, req *builderv0.SyncRequest) (*builde
 	return s.Builder.SyncResponse()
 }
 
-// Audit/Upgrade — Swift agent is WIP. Return Tool="missing" / NOOP so
-// workspace-wide commands aggregate cleanly without erroring on swift.
 func (s *Builder) Audit(ctx context.Context, _ *builderv0.AuditRequest) (*builderv0.AuditResponse, error) {
 	defer s.Wool.Catch()
-	return s.Builder.AuditResponse(nil, nil, "missing", "SWIFT")
+	return s.Builder.AuditUnsupported("SwiftPM has no authoritative vulnerability audit command and OSV does not support Package.resolved")
+}
+
+func (s *Builder) SBOM(ctx context.Context, _ *builderv0.SBOMRequest) (*builderv0.SBOMResponse, error) {
+	defer s.Wool.Catch()
+	result, err := sbom.Swift(ctx, s.sourceLocation)
+	if err != nil {
+		return s.Builder.SBOMError(err)
+	}
+	return s.Builder.SBOMResponse(result.Bom, result.Tool, result.Language, result.SHA256)
 }
 
 func (s *Builder) Upgrade(ctx context.Context, _ *builderv0.UpgradeRequest) (*builderv0.UpgradeResponse, error) {
