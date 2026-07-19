@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"testing"
 
+	agentv0 "github.com/codefly-dev/core/generated/go/codefly/services/agent/v0"
 	"gopkg.in/yaml.v3"
 )
 
@@ -16,6 +18,16 @@ func TestNewService_EmbedsBase(t *testing.T) {
 	}
 	if svc.Settings == nil {
 		t.Fatal("Service.Settings is nil")
+	}
+}
+
+func TestGetAgentInformationUsesEmbeddedReadmeTemplate(t *testing.T) {
+	information, err := NewService().GetAgentInformation(context.Background(), &agentv0.AgentInformationRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if information.GetReadMe() == "" {
+		t.Fatal("agent README is empty")
 	}
 }
 

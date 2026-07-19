@@ -34,10 +34,8 @@ type Runtime struct {
 	port uint32
 }
 
-func NewRuntime() *Runtime {
-	return &Runtime{
-		Service: NewService(),
-	}
+func NewRuntime(service *Service) *Runtime {
+	return &Runtime{Service: service}
 }
 
 func (s *Runtime) Load(ctx context.Context, req *runtimev0.LoadRequest) (*runtimev0.LoadResponse, error) {
@@ -74,7 +72,10 @@ func (s *Runtime) Load(ctx context.Context, req *runtimev0.LoadRequest) (*runtim
 		// Fall back to HTTP endpoint
 		s.RestEndpoint, err = resources.FindHTTPEndpoint(ctx, s.Endpoints)
 		if err != nil {
-			return s.Runtime.LoadErrorf(err, "finding rest/http endpoint")
+			// Formatting and source inspection do not require a runnable
+			// endpoint. Init fails clearly if lifecycle execution is requested.
+			s.Wool.Debug("no REST/HTTP endpoint found", wool.ErrField(err))
+			s.RestEndpoint = nil
 		}
 	}
 
@@ -151,6 +152,7 @@ func (s *Runtime) Init(ctx context.Context, req *runtimev0.InitRequest) (*runtim
 	if err != nil {
 		return s.Runtime.InitErrorf(err, "cannot create native environment")
 	}
+	s.activeEnv = s.nativeEnv
 
 	err = s.nativeEnv.Init(ctx)
 	if err != nil {

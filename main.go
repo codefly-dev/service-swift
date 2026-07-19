@@ -14,11 +14,13 @@ import (
 
 	"github.com/codefly-dev/core/agents"
 	"github.com/codefly-dev/core/agents/services"
+	corecode "github.com/codefly-dev/core/code"
 	basev0 "github.com/codefly-dev/core/generated/go/codefly/base/v0"
 	agentv0 "github.com/codefly-dev/core/generated/go/codefly/services/agent/v0"
 	configurations "github.com/codefly-dev/core/resources"
 	runnersbase "github.com/codefly-dev/core/runners/base"
 	"github.com/codefly-dev/core/shared"
+	"github.com/codefly-dev/core/toolbox/lang"
 )
 
 // Agent version
@@ -64,6 +66,7 @@ type Service struct {
 	*Settings
 
 	sourceLocation string
+	activeEnv      runnersbase.RunnerEnvironment
 }
 
 func (s *Service) GetAgentInformation(ctx context.Context, _ *agentv0.AgentInformationRequest) (*agentv0.AgentInformation, error) {
@@ -86,6 +89,7 @@ func (s *Service) GetAgentInformation(ctx context.Context, _ *agentv0.AgentInfor
 			Docker: true,
 		},
 		Toolchains: []agentv0.Toolchain_Type{agentv0.Toolchain_SWIFT},
+		Languages:  []agentv0.Language_Type{agentv0.Language_SWIFT},
 		Protocols:  []agentv0.Protocol_Type{agentv0.Protocol_HTTP},
 		ReadMe:     readme,
 	}.Build(), nil
@@ -109,10 +113,15 @@ const UbuntuVersion = "22.04"
 
 func main() {
 	svc := NewService()
+	code := NewCode(svc)
+	tooling := corecode.NewSourceTooling(code)
 	agents.Serve(agents.PluginRegistration{
 		Agent:   svc,
-		Runtime: NewRuntime(),
-		Builder: NewBuilder(),
+		Runtime: NewRuntime(svc),
+		Builder: NewBuilder(svc),
+		Code:    code,
+		Tooling: tooling,
+		Toolbox: lang.NewSourceToolboxFromTooling(agent.Name, agent.Version, tooling),
 	})
 }
 
