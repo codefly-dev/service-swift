@@ -57,6 +57,9 @@ spec:
           ports:
             - containerPort: 8080
               name: http
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           resources:
             requests:
               cpu: 50m
@@ -83,3 +86,6 @@ spec:
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 30
+      volumes:
+        - name: tmp
+          emptyDir: {}
