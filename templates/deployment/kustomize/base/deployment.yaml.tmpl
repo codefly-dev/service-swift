@@ -3,8 +3,11 @@ kind: Deployment
 metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ .Name }}
+    app.kubernetes.io/managed-by: codefly
 spec:
-  replicas: 1
+  replicas: {{ .Replicas }}
   selector:
     matchLabels:
       app: {{ .Name }}
@@ -13,17 +16,64 @@ spec:
       labels:
         app: {{ .Name }}
     spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: {{ .Name }}
           image: {{ .Image }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+                - ALL
           envFrom:
             - configMapRef:
                 name: {{ .Name }}-config
+{{- if not .GitOps }}
             - secretRef:
                 name: {{ .Name }}-secret
+{{- end }}
+{{- if .GitOps }}
+{{- if .SecretReferences }}
+          env:
+{{- range $environmentVariable, $reference := .SecretReferences }}
+            - name: {{ $environmentVariable }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $reference.Name }}
+                  key: {{ $reference.Key }}
+                  optional: {{ $reference.Optional }}
+{{- end }}
+{{- end }}
+{{- end }}
           ports:
             - containerPort: 8080
               name: http
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 30
           readinessProbe:
             httpGet:
               path: /health
@@ -36,3 +86,6 @@ spec:
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 30
+      volumes:
+        - name: tmp
+          emptyDir: {}
