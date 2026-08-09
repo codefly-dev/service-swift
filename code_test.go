@@ -8,9 +8,27 @@ import (
 	"strings"
 	"testing"
 
+	corecode "github.com/codefly-dev/core/code"
 	basev0 "github.com/codefly-dev/core/generated/go/codefly/base/v0"
 	codev0 "github.com/codefly-dev/core/generated/go/codefly/services/code/v0"
+	toolingv0 "github.com/codefly-dev/core/generated/go/codefly/services/tooling/v0"
 )
+
+func TestSwiftToolingReportsSemanticCoverageHonestly(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "Example.swift"), []byte("struct Example {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	service := NewService()
+	service.sourceLocation = dir
+	response, err := corecode.NewSourceTooling(NewCode(service)).GetSemanticIndex(t.Context(), &toolingv0.GetSemanticIndexRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.GetFailure() != nil || response.GetIndex().GetState() != basev0.SemanticIndexState_SEMANTIC_INDEX_STATE_NOT_ATTEMPTED || len(response.GetIndex().GetIssues()) != 1 || response.GetIndex().GetIssues()[0].GetCode() != "unsupported_source" {
+		t.Fatalf("semantic response = %+v", response)
+	}
+}
 
 func TestSwiftFixDryRunFormatsWithoutWriting(t *testing.T) {
 	if _, err := exec.LookPath("swift"); err != nil {
