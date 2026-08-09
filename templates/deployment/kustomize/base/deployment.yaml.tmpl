@@ -37,11 +37,11 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ .Name }}-config
-{{- if not .GitOps }}
+{{- if not .Restricted }}
             - secretRef:
                 name: {{ .Name }}-secret
 {{- end }}
-{{- if .GitOps }}
+{{- if .Restricted }}
 {{- if .SecretReferences }}
           env:
 {{- range $environmentVariable, $reference := .SecretReferences }}
