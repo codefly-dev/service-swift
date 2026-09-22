@@ -2,3 +2,6 @@ publisher: codefly.dev
 kind: codefly:service
 name: swift
 version: 0.0.20
+release:
+  owner: workflow
+  workflow: release.yml
